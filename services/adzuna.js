@@ -4,17 +4,11 @@ const ADZUNA_BASE = 'https://api.adzuna.com/v1/api/jobs/gb/search/1';
 
 const KEYWORDS = [
   'graduate finance analyst London 2026',
-  'graduate scheme investment banking London',
   'fintech graduate analyst London',
-  'law finance graduate programme London',
-  'graduate analyst financial services London',
-  'wealth management graduate London',
-  'capital markets graduate analyst London',
-  'corporate finance graduate London 2026',
-  'blockchain fintech analyst graduate London',
-  'legal analyst graduate London finance',
-  'investment analyst graduate programme London',
-  'digital assets analyst graduate London',
+  'law finance graduate London',
+  'investment analyst graduate London',
+  'capital markets graduate London',
+  'graduate scheme financial services London',
 ];
 
 async function fetchAdzunaJobs(keyword, count = 20) {
@@ -28,9 +22,8 @@ async function fetchAdzunaJobs(keyword, count = 20) {
         where: 'London',
         sort_by: 'date',
       },
-      timeout: 10000,
+      timeout: 15000,
     });
-
     return res.data.results.map(job => ({
       external_id: `adzuna-${job.id}`,
       source: 'adzuna',
@@ -51,19 +44,20 @@ async function fetchAdzunaJobs(keyword, count = 20) {
 
 async function fetchAllAdzunaKeywords() {
   const results = [];
-  // Fetch keywords one at a time with delay to avoid 429 rate limiting
   for (const keyword of KEYWORDS) {
-    const jobs = await fetchAdzunaJobs(keyword, 15);
+    const jobs = await fetchAdzunaJobs(keyword, 20);
+    console.log(`[Adzuna] "${keyword}" -> ${jobs.length} jobs`);
     results.push(...jobs);
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 1000));
   }
-  // Deduplicate by external_id
   const seen = new Set();
-  return results.filter(j => {
+  const unique = results.filter(j => {
     if (seen.has(j.external_id)) return false;
     seen.add(j.external_id);
     return true;
   });
+  console.log(`[Adzuna] Total unique jobs: ${unique.length}`);
+  return unique;
 }
 
 module.exports = { fetchAdzunaJobs, fetchAllAdzunaKeywords };
