@@ -1,59 +1,41 @@
-const { openai } = require('../utils/embeddings');
+const { generateText } = require('../utils/embeddings');
 
 /**
  * Generate a tailored cover letter for a specific job.
  */
 async function generateCoverLetter(cvText, jobTitle, company, jobDescription = '') {
-  const systemPrompt = `You are an expert career coach and professional writer.
-Write a compelling, concise cover letter (3 paragraphs, ~200 words) that:
-- Opens with a strong hook specific to the company and role
-- Highlights the most relevant skills/experience from the CV
-- Closes with a clear call to action
-- Sounds natural, not AI-generated
-- Avoids clichés like "I am writing to apply..."
-Format: Plain text, no headers, no placeholders.`;
+  const prompt = `You are an expert career coach. Write a compelling, concise cover letter (3 paragraphs, ~200 words) for this candidate.
 
-  const userPrompt = `CV:
-${cvText.slice(0, 3000)}
+CV:
+${cvText.slice(0, 2000)}
 
 Role: ${jobTitle} at ${company}
-${jobDescription ? `Job Description (excerpt): ${jobDescription.slice(0, 1000)}` : ''}
+${jobDescription ? `Job Description: ${jobDescription.slice(0, 800)}` : ''}
 
-Write the cover letter now:`;
+Rules:
+- Opens with a strong hook specific to the company and role
+- Highlights the most relevant skills from the CV
+- Closes with a clear call to action
+- Sounds natural, not AI-generated
+- No "I am writing to apply..." clichés
+- Plain text only, no headers
 
-  const res = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    max_tokens: 400,
-    temperature: 0.7,
-  });
+Cover letter:`;
 
-  return res.choices[0].message.content.trim();
+  return await generateText(prompt);
 }
 
 /**
- * Generate a tailored CV summary/objective for a specific job.
+ * Generate a tailored CV summary for a specific job.
  */
 async function tailorCVSummary(cvText, jobTitle, company) {
-  const res = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: 'You are a CV expert. Write a 2-3 sentence professional summary tailored to the specific job. Be specific and quantified where possible.',
-      },
-      {
-        role: 'user',
-        content: `CV: ${cvText.slice(0, 2000)}\nTarget role: ${jobTitle} at ${company}\nWrite the summary:`,
-      },
-    ],
-    max_tokens: 150,
-  });
+  const prompt = `Write a 2-3 sentence professional CV summary for this candidate applying for ${jobTitle} at ${company}.
 
-  return res.choices[0].message.content.trim();
+CV: ${cvText.slice(0, 1500)}
+
+Summary:`;
+
+  return await generateText(prompt);
 }
 
 module.exports = { generateCoverLetter, tailorCVSummary };

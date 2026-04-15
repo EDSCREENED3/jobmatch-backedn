@@ -1,22 +1,31 @@
-const { OpenAI } = require('openai');
+const axios = require('axios');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
+const COHERE_API = 'https://api.cohere.ai/v1';
 
 /**
- * Generate an embedding vector for a piece of text.
+ * Generate an embedding vector using Cohere's free embed model.
  */
 async function embed(text) {
-  const trimmed = text.slice(0, 8000); // stay within token limits
-  const res = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
-    input: trimmed,
-  });
-  return res.data[0].embedding;
+  const trimmed = text.slice(0, 4000);
+  const res = await axios.post(
+    `${COHERE_API}/embed`,
+    {
+      texts: [trimmed],
+      model: 'embed-english-v3.0',
+      input_type: 'search_document',
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.COHERE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return res.data.embeddings[0];
 }
 
 /**
- * Cosine similarity between two embedding vectors.
- * Returns a value between -1 and 1 (higher = more similar).
+ * Cosine similarity between two vectors.
  */
 function cosineSimilarity(a, b) {
   if (!a || !b || a.length !== b.length) return 0;
@@ -30,19 +39,54 @@ function cosineSimilarity(a, b) {
 }
 
 /**
- * Batch-embed multiple texts with rate-limit safety.
+ * Batch embed multiple texts (Cohere allows up to 96 per request).
  */
-async function batchEmbed(texts, batchSize = 5) {
+async function batchEmbed(texts, batchSize = 48) {
   const results = [];
   for (let i = 0; i < texts.length; i += batchSize) {
-    const batch = texts.slice(i, i + batchSize);
-    const embeddings = await Promise.all(batch.map(embed));
-    results.push(...embeddings);
+    const batch = texts.slice(i, i + batchSize).map(t => t.slice(0, 4000));
+    const res = await axios.post(
+      `${COHERE_API}/embed`,
+      {
+        texts: batch,
+        model: 'embed-english-v3.0',
+        input_type: 'search_document',
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.COHERE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    results.push(...res.data.embeddings);
     if (i + batchSize < texts.length) {
-      await new Promise(r => setTimeout(r, 200)); // small delay to avoid rate limits
+      await new Promise(r => setTimeout(r, 300));
     }
   }
   return results;
 }
 
-module.exports = { openai, embed, cosineSimilarity, batchEmbed };
+/**
+ * Generate text using Cohere's free command model.
+ */
+async function generateText(prompt) {
+  const res = await axios.post(
+    `${COHERE_API}/generate`,
+    {
+      model: 'command',
+      prompt,
+      max_tokens: 400,
+      temperature: 0.7,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.COHERE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return res.data.generations[0].text.trim();
+}
+
+module.exports = { embed, cosineSimilarity, batchEmbed, generateText };
