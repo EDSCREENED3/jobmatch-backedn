@@ -1,45 +1,27 @@
 const axios = require('axios');
 
-async function cohereChat(message) {
-  try {
-    const res = await axios.post(
-      'https://api.cohere.ai/v1/chat',
-      {
-        model: 'command-r',
-        message: message,
+async function groqChat(message) {
+  const res = await axios.post(
+    'https://api.groq.com/openai/v1/chat/completions',
+    {
+      model: 'llama-3.1-8b-instant',
+      messages: [{ role: 'user', content: message }],
+      max_tokens: 600,
+      temperature: 0.7,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.COHERE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 30000,
-      }
-    );
-    return res.data.text.trim();
-  } catch (err) {
-    const res = await axios.post(
-      'https://api.cohere.ai/v1/generate',
-      {
-        model: 'command',
-        prompt: message,
-        max_tokens: 500,
-        temperature: 0.7,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.COHERE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 30000,
-      }
-    );
-    return res.data.generations[0].text.trim();
-  }
+      timeout: 30000,
+    }
+  );
+  return res.data.choices[0].message.content.trim();
 }
 
 async function generateCoverLetter(cvText, jobTitle, company, jobDescription = '') {
-  const message = `You are an expert career coach. Write a compelling cover letter (3 paragraphs, about 200 words) for this candidate.
+  const message = `Write a compelling cover letter (3 paragraphs, about 200 words) for this candidate.
 
 CV:
 ${cvText.slice(0, 2000)}
@@ -56,7 +38,7 @@ Rules:
 
 Write the cover letter now:`;
 
-  return await cohereChat(message);
+  return await groqChat(message);
 }
 
 async function tailorCVSummary(cvText, jobTitle, company) {
@@ -66,7 +48,7 @@ CV: ${cvText.slice(0, 1500)}
 
 Write only the summary, nothing else:`;
 
-  return await cohereChat(message);
+  return await groqChat(message);
 }
 
 module.exports = { generateCoverLetter, tailorCVSummary };
