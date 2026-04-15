@@ -5,9 +5,15 @@ async function groqChat(message) {
     'https://api.groq.com/openai/v1/chat/completions',
     {
       model: 'llama-3.1-8b-instant',
-      messages: [{ role: 'user', content: message }],
-      max_tokens: 600,
-      temperature: 0.7,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert career coach specialising in finance, fintech and law graduate roles in London. Write compelling, specific cover letters that highlight quantified achievements and relevant experience. Never use generic phrases. Always sound like a real person, not AI.'
+        },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 700,
+      temperature: 0.75,
     },
     {
       headers: {
@@ -21,32 +27,33 @@ async function groqChat(message) {
 }
 
 async function generateCoverLetter(cvText, jobTitle, company, jobDescription = '') {
-  const message = `Write a compelling cover letter (3 paragraphs, about 200 words) for this candidate.
+  const message = `Write a highly tailored, compelling cover letter for this candidate. 3 paragraphs, 200-250 words.
 
-CV:
-${cvText.slice(0, 2000)}
+CANDIDATE BACKGROUND:
+${cvText.slice(0, 3000)}
 
-Role: ${jobTitle} at ${company}
-${jobDescription ? 'Job Description: ' + jobDescription.slice(0, 600) : ''}
+TARGET ROLE: ${jobTitle} at ${company}
+${jobDescription ? 'JOB DESCRIPTION: ' + jobDescription.slice(0, 800) : ''}
 
-Rules:
-- Strong opening hook specific to the company
-- Highlight most relevant skills from the CV
-- Clear call to action at the end
-- Natural tone, no "I am writing to apply" cliches
-- Plain text only, no headers or bullet points
+REQUIREMENTS:
+- Paragraph 1: Strong specific hook mentioning ${company} by name and why this role
+- Paragraph 2: Pick 2-3 most relevant achievements from the CV with specific details (grades, projects, internship work)
+- Paragraph 3: Forward-looking close with clear call to action
+- Tone: Confident, intelligent, natural — like a top law/finance graduate would write
+- NO "I am writing to apply", NO generic phrases, NO bullet points
+- Reference specific CV details like the MSc distinction grades, fintech internship, or dissertation topic where relevant
 
-Write the cover letter now:`;
+Write the cover letter:`;
 
   return await groqChat(message);
 }
 
 async function tailorCVSummary(cvText, jobTitle, company) {
-  const message = `Write a 2-3 sentence professional CV summary for this candidate applying for ${jobTitle} at ${company}.
+  const message = `Write a punchy 2-3 sentence professional summary for this candidate applying for ${jobTitle} at ${company}.
 
-CV: ${cvText.slice(0, 1500)}
+CV: ${cvText.slice(0, 2000)}
 
-Write only the summary, nothing else:`;
+Make it specific to the role. Reference their MSc, fintech background or relevant experience. No generic phrases.`;
 
   return await groqChat(message);
 }
